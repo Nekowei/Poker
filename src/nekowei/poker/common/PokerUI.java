@@ -32,7 +32,7 @@ public class PokerUI extends Component {
 
 	public PokerUI(Poker p) {
 		this.p = p;
-		if (!p.isEmpty()) {
+		if (!p.isEmpty() && p.getNumber() != 0) {
 			Map<Poker, BufferedImage> imageMap = Loader.getImageMap();
 			for (Poker obj : imageMap.keySet()) {
 				if (p.equals(obj)) {
@@ -56,18 +56,28 @@ public class PokerUI extends Component {
 			g.drawRect(0, 0, getWidth() - 2, getHeight() - 2);
 		}
 		if (!p.isEmpty()) {
-			if (resize) {
-				image = Scalr.resize(image, getWidth(), getHeight());
-			}
-			g.drawImage(image, 0, 0, getWidth(), getHeight(), null);
-			if (showNumberSuit) {				
-				if (p.isRed()) {			
+			if (p.getNumber() == 0) {
+				if (p.isRed()) {
 					g.setColor(Color.RED);
 				} else {
 					g.setColor(Color.BLACK);
 				}
-				g.setFont(new Font(getFont().getName(), Font.BOLD, getWidth() / 9));
-				g.drawString(p.getFormedSuit()+" "+p.getFormedNumber(), getWidth() / 20, getWidth() / 6);
+				g.setFont(new Font(getFont().getName(), Font.BOLD, getWidth()));
+				g.drawString(p.getFormedSuit(), getWidth() / 16, getHeight() * 3 / 4);
+			} else {				
+				if (resize) {
+					image = Scalr.resize(image, getWidth(), getHeight());
+				}
+				g.drawImage(image, 0, 0, getWidth(), getHeight(), null);
+				if (showNumberSuit) {				
+					if (p.isRed()) {			
+						g.setColor(Color.RED);
+					} else {
+						g.setColor(Color.BLACK);
+					}
+					g.setFont(new Font(getFont().getName(), Font.BOLD, getWidth() / 8));
+					g.drawString(p.getFormedSuit()+""+p.getFormedNumber(), getWidth() / 20, getWidth() / 6);
+				}
 			}
 		}
 	}

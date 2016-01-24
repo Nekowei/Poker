@@ -24,13 +24,13 @@ public class Loader {
 	public static final String EXT = ".jpg";
 
 	public static void preLoad() {
-		BufferedImage defaultImage = null;
+//		BufferedImage defaultImage = null;
 		BufferedImage evil = null;
 		BufferedImage light = null;
 		BufferedImage deep = null;
 		BufferedImage normal = null;
 		try {
-			defaultImage = Images.loadDefaultImage("marisa.jpg");
+//			defaultImage = Images.loadDefaultImage("marisa.jpg");
 			evil = Images.loadDefaultImage("evil.jpg");
 			light = Images.loadDefaultImage("light.jpg");
 			deep = Images.loadDefaultImage("deep.jpg");
@@ -46,11 +46,11 @@ public class Loader {
 				if (image != null) {
 					imageMap.put(p, image);
 				} else {
-					if (suit.equals(Suit.diamond)) {
+					if (suit.equals(Suit.spade)) {
 						imageMap.put(p, evil);
-					} else if (suit.equals(Suit.club)) {
+					} else if (suit.equals(Suit.diamond)) {
 						imageMap.put(p, light);
-					} else if (suit.equals(Suit.spade)) {
+					} else if (suit.equals(Suit.club)) {
 						imageMap.put(p, deep);
 					} else if (suit.equals(Suit.heart)) {
 						imageMap.put(p, normal);

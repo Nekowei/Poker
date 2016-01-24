@@ -35,7 +35,7 @@ public class FreeCellCore {
 	/**
 	 * 临时空间
 	 */
-	private List<Poker> freeCell;
+	private Map<Integer, Poker> freeCell;
 	/**
 	 * 完成栈
 	 */
@@ -75,13 +75,13 @@ public class FreeCellCore {
 	public void newGame(int SEED) {
 		r = new Random(SEED);
 
-		freeCell = new ArrayList<Poker>();
+		freeCell = new HashMap<Integer, Poker>();
 		for (int i = 0; i < 4; i++) {
-			freeCell.add(new Poker());
+			freeCell.put(i, new Poker());
 		}
 		finalStack = new HashMap<Suit, Poker>();
 		for (Suit suit : Suit.values()) {
-			finalStack.put(suit, new Poker());
+			finalStack.put(suit, new Poker(suit, 0));
 		}
 		playStack = new HashMap<Integer, List<Poker>>();
 		for (int i = 0; i < PLAY_SIZE; i++) {
@@ -136,7 +136,7 @@ public class FreeCellCore {
 		} else {
 			// 先看空挡，满了才判断可否移动
 			boolean full = true;
-			for (Poker p : freeCell) {
+			for (Poker p : freeCell.values()) {
 				if (p == null) {
 					full = false;
 					break;
@@ -247,7 +247,7 @@ public class FreeCellCore {
 	/**
 	 * 取出卡牌，放到移动栈 
 	 */
-	public void getCardsMove(int column, Poker p) {
+	public void getCardsFromPlayStack(int column, Poker p) {
 		Logger.info("get moving...");
 		List<Poker> list = playStack.get(column);
 		int row = getRow(list, p);
@@ -263,10 +263,21 @@ public class FreeCellCore {
 			playStack.put(column, list);
 			getColumn = column;
 		} else {
-			Logger.info("can't get at column"+column);
+			Logger.info("can't get at play column"+column);
 		}
 	}
 
+	public void getCardFromFreeCell(int column) {
+		Logger.info("get moving...");
+		Poker p = freeCell.get(column);
+		if (!p.isEmpty()) {
+			movingStack.add(p);
+			freeCell.put(column, new Poker());
+		} else {
+			Logger.info("can't get at free column"+column);
+		}
+	}
+	
 	/**
 	 * 将卡牌放入目标，不能放就回到原位
 	 */
@@ -312,7 +323,7 @@ public class FreeCellCore {
 	}
 	
 	private void moveToFreeCell(int column) {
-		freeCell.add(column, movingStack.get(0));
+		freeCell.put(column, movingStack.get(0));
 		// 清除列表，let GC do the rest
 		movingStack = new ArrayList<Poker>();
 		gameStateCheck();
@@ -324,7 +335,8 @@ public class FreeCellCore {
 	 * 不然给我回去
 	 */
 	public void tryMoveToFinalStack(int column) {
-		for (Suit suit : Suit.values()) {			
+		for (Suit suit : Suit.values()) {
+			Logger.info(suit.ordinal() +","+ movingStack.size());
 			if (suit.ordinal()==column && movingStack.size() == 1) {
 				Poker p = movingStack.get(0);
 				if (p.getSuit().equals(suit) && (
@@ -335,8 +347,6 @@ public class FreeCellCore {
 				} else {
 					moveToPlayStack(getColumn);
 				}
-			}  else {
-				moveToPlayStack(getColumn);
 			}
 		}
 	}
@@ -358,7 +368,7 @@ public class FreeCellCore {
 	
 	//////////////////////////////////////////////////////
 
-	public List<Poker> getFreeCell() {
+	public Map<Integer, Poker> getFreeCell() {
 		return freeCell;
 	}
 
@@ -391,7 +401,7 @@ public class FreeCellCore {
 	}
 	
 	public void debug() {
-		for (Poker poker : freeCell) {
+		for (Poker poker : freeCell.values()) {
 			System.out.print(poker.toString()+"\t");
 		}
 		for (Poker poker : finalStack.values()) {

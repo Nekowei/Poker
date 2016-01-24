@@ -1,6 +1,5 @@
 package nekowei.poker.freeCell;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -16,6 +15,7 @@ import java.util.Map;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import javax.swing.event.MouseInputListener;
 
 import nekowei.poker.common.Poker;
@@ -93,19 +93,27 @@ public class FreeCellGUI extends JFrame implements MouseInputListener {
 		setLocation(screen.width / 2 - getWidth() / 2, screen.height / 2 - getHeight() / 2);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-		setLayout(new BorderLayout());
+		setLayout(null);
 		mainPanel = new JPanel();
 		mainPanel.setBackground(BGC);
 		mainPanel.setLayout(null);
 		mainPanel.setName("mainPanel");
-		add(mainPanel, BorderLayout.CENTER);
+		mainPanel.setBounds(0, 0, getWidth(), getHeight());
 
 		initMovingPanel();	// 原来先add的会显示在上面……
+		add(mainPanel);
 		initHeadPanel();
 		initFreeCellPanel();
 		initFinalStackPanel();
 		initPlayStackPanel();
 
+	}
+
+	private void initMovingPanel() {
+		movingPanel = new JPanel();
+		movingPanel.setBackground(null);
+		movingPanel.setName("movingPanel");
+		add(movingPanel);
 	}
 
 	private void initHeadPanel() {
@@ -147,13 +155,6 @@ public class FreeCellGUI extends JFrame implements MouseInputListener {
 		}
 	}
 
-	private void initMovingPanel() {
-		movingPanel = new JPanel();
-		movingPanel.setBackground(null);
-		movingPanel.setName("movingPanel");
-		mainPanel.add(movingPanel);
-	}
-
 	///////////////////////////////////////////////////////////////////////////////////
 	
 	/**
@@ -180,21 +181,25 @@ public class FreeCellGUI extends JFrame implements MouseInputListener {
 		yOffset = (int) ((double) stackWidth * PokerUI.RATIO);
 		pokerWidth = stackWidth - 40;
 		pokerHeight = (int) ((double) pokerWidth * PokerUI.RATIO);
+
+		mainPanel.setBounds(0, 0, getWidth(), getHeight());
 	}
 
 	private void updateHeadPanel() {
 		headPanel.setBounds((getWidth() - headWidth) / 2, 0, headWidth, pokerHeight);
 	}
 
-	private void updateFreeCellPanel(List<Poker> list) {
+	private void updateFreeCellPanel(Map<Integer, Poker> map) {
 		freeCellPanel.removeAll();
 		freeCellPanel.setBounds(0, 0, stackWidth * 4, yOffset);
-		for (Integer i = 0; i < list.size(); i++) {
-			PokerUI pui = new PokerUI(list.get(i));
+		Integer i = 0;
+		for (Poker p : map.values()) {
+			PokerUI pui = new PokerUI(p);
 			pui.setShowSlot(true);
 			freeCellPanel.add(pui);
 			pui.setBounds(stackWidth * i + 10, 10, pokerWidth, pokerHeight);
 			pui.setName(i.toString());
+			i++;
 		}
 	}
 
@@ -239,6 +244,7 @@ public class FreeCellGUI extends JFrame implements MouseInputListener {
 	}
 
 	private void updateMovingPanel(List<Poker> list) {
+		movingPanel.removeAll();
 		for (int j = list.size() - 1; j >= 0; j--) {
 			PokerUI pui = new PokerUI(list.get(j));
 			movingPanel.add(pui);
@@ -264,7 +270,7 @@ public class FreeCellGUI extends JFrame implements MouseInputListener {
 	@Override
 	public void mouseMoved(MouseEvent e) {
 		Point p = getMousePosition();
-		if (p.getX() < getWidth() / 2) {
+		if (p != null && p.getX() < getWidth() / 2) {
 			headPanel.setLeftSide(true);
 		} else {
 			headPanel.setLeftSide(false);
@@ -274,24 +280,32 @@ public class FreeCellGUI extends JFrame implements MouseInputListener {
 
 	@Override
 	public void mousePressed(MouseEvent e) {
-		if (e.getSource().equals(freeCellPanel)) {
-			Logger.info("press free111"+e.getPoint().toString());
-			
-		} else if (e.getSource().equals(finalStackPanel)) {
-			Logger.info("press final"+e.getPoint().toString());
-			
-		} else {
-			Logger.info("press at"+e.getPoint().toString());
+		if (e.getSource() instanceof JPanel) {			
 			JPanel p = (JPanel) e.getSource();
-			if (p.getComponentAt(e.getPoint()) instanceof PokerUI) {
-				PokerUI pui = (PokerUI) p.getComponentAt(e.getPoint());
-				int column = Integer.valueOf(p.getName());
-				// 如果拖的动就把选中的扑克队列取出来操作
-				FreeCellCore.getInstance().getCardsMove(column, pui.getP());
+			
+			if (p.equals(freeCellPanel)) {
+				if (p.getComponentAt(e.getPoint()) instanceof PokerUI) {
+					PokerUI pui = (PokerUI) p.getComponentAt(e.getPoint());
+					int column = Integer.valueOf(pui.getName());
+					Logger.info("press free "+column);
+					FreeCellCore.getInstance().getCardFromFreeCell(column);
+				}
+				
+			} else if (p.equals(finalStackPanel)) {
+				Logger.info("press final"+e.getPoint().toString());
+				
+			} else {
+				if (p.getComponentAt(e.getPoint()) instanceof PokerUI) {
+					PokerUI pui = (PokerUI) p.getComponentAt(e.getPoint());
+					int column = Integer.valueOf(p.getName());
+					Logger.info("press at play"+column);
+					FreeCellCore.getInstance().getCardsFromPlayStack(column, pui.getP());
+				}
 			}
+			
+			update(FreeCellCore.getInstance());
+			FreeCellCore.getInstance().debug();
 		}
-		update(FreeCellCore.getInstance());
-		FreeCellCore.getInstance().debug();
 	}
 
 	@Override
@@ -301,50 +315,56 @@ public class FreeCellGUI extends JFrame implements MouseInputListener {
 
 	@Override
 	public void mouseReleased(MouseEvent e) {
-		if (e.getSource().equals(freeCellPanel)) {
-			
-			Logger.info("release at free "+e.getPoint().toString());
-			JPanel p = (JPanel) e.getSource();
-			if (p.getComponentAt(e.getPoint()) instanceof PokerUI) {
-				int column = Integer.valueOf(p.getName());
-				FreeCellCore.getInstance().tryMoveToFreeCell(column);
-			} else {
-				FreeCellCore.getInstance().moveBack();
-			}
-			
-		} else if (e.getSource().equals(finalStackPanel)) {
-			
-			Logger.info("release at final "+e.getPoint().toString());
-			JPanel p = (JPanel) e.getSource();
-			if (p.getComponentAt(e.getPoint()) instanceof PokerUI) {
-				int column = Integer.valueOf(p.getName());
-				FreeCellCore.getInstance().tryMoveToFinalStack(column);
-			} else {
-				FreeCellCore.getInstance().moveBack();
-			}
-			
-		} else if (e.getSource().equals(movingPanel)) {
-			
-			Logger.info("shit");
-			
-		} else if (e.getSource() instanceof PokerUI) {
-			PokerUI pui = (PokerUI)e.getSource();
-			Logger.info("shit!?"+pui.getParent().toString());
-		} else {
-
-			Logger.info("release move to "+e.getSource().toString()+e.getPoint().toString());
-			Logger.info("i am your father:"+((Component)e.getSource()).getParent().toString());
-			JPanel p = (JPanel) e.getSource();
-			if (p.getComponentAt(e.getPoint()) instanceof PokerUI) {
-				int column = Integer.valueOf(p.getName());
-				// 如果拖的动就把选中的扑克队列取出来操作
-				FreeCellCore.getInstance().tryMoveToPlayStack(column);
-			} else {
-				FreeCellCore.getInstance().moveBack();
+		// 通过这个神奇的办法获取到释放鼠标时所在的组件
+		if (e.getComponent().getParent().equals(mainPanel)) {
+			Point po = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), e.getComponent().getParent());
+			Component c = mainPanel.getComponentAt(po);
+			po = SwingUtilities.convertPoint(mainPanel, po, c);
+			if (c instanceof JPanel) {
+				JPanel p = (JPanel) c;
+				if (c.equals(freeCellPanel)) {
+					releaseOnFreeCell(p, po);
+				} else if (c.equals(finalStackPanel)) {
+					releaseOnFinalStack(p, po);
+				} else {
+					releaseOnPlayStack(p, po);
+				}
+				update(FreeCellCore.getInstance());
+				FreeCellCore.getInstance().debug();
 			}
 		}
-		update(FreeCellCore.getInstance());
-		FreeCellCore.getInstance().debug();
+	}
+
+	private void releaseOnFreeCell(JPanel p, Point po) {
+		if (p.getComponentAt(po) instanceof PokerUI) {
+			PokerUI pui = (PokerUI) p.getComponentAt(po);
+			int column = Integer.valueOf(pui.getName());
+			Logger.info("release at free "+column);
+			FreeCellCore.getInstance().tryMoveToFreeCell(column);
+		} else {
+			FreeCellCore.getInstance().moveBack();
+		}
+	}
+
+	private void releaseOnFinalStack(JPanel p, Point po) {
+		if (p.getComponentAt(po) instanceof PokerUI) {
+			PokerUI pui = (PokerUI) p.getComponentAt(po);
+			int column = Integer.valueOf(pui.getName());
+			Logger.info("release at final "+column);
+			FreeCellCore.getInstance().tryMoveToFinalStack(column);
+		} else {
+			FreeCellCore.getInstance().moveBack();
+		}
+	}
+
+	private void releaseOnPlayStack(JPanel p, Point po) {
+		if (p.getComponentAt(po) instanceof PokerUI) {
+			int column = Integer.valueOf(p.getName());
+			Logger.info("release move to "+column);
+			FreeCellCore.getInstance().tryMoveToPlayStack(column);
+		} else {
+			FreeCellCore.getInstance().moveBack();
+		}
 	}
 
 	@Override
@@ -354,6 +374,8 @@ public class FreeCellGUI extends JFrame implements MouseInputListener {
 	@Override
 	public void mouseClicked(MouseEvent e) {
 		System.out.println("click!?");
+//		releaseOnFinalStack(e);
 	}
 
+	
 }

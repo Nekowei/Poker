@@ -9,7 +9,7 @@ import nekowei.util.Logger;
  */
 public class Poker {
 	public enum Suit {
-		spade,heart,diamond,club;
+		heart,club,diamond,spade;
 	}
 	
 	private Suit suit;
