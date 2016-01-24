@@ -1,5 +1,8 @@
+# project files
 *.class
 .classpath
 .project
+
+# folders
 .settings
 bin
